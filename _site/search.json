@@ -1,0 +1,30 @@
+[
+  {
+    "objectID": "about.html",
+    "href": "about.html",
+    "title": "About",
+    "section": "",
+    "text": "About this site\n\n1 + 1\n\n[1] 2"
+  },
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "Mysterium Game Setup",
+    "section": "",
+    "text": "import { Inputs } from \"@observablehq/inputs\"\nviewof difficulty = Inputs.select(\n  ['easy', 'medium', 'hard'],\n  {label: \"Difficulty:\", value: \"medium\"}\n)\n\nviewof players = Inputs.range(\n  [2, 7],\n  {label: \"Number of Players:\", step: 1, value: 2}\n)\n\nviewof hiddenSigns = Inputs.toggle({label: \"Hidden Signs Expansion\", value: false})\nviewof secretsLies = Inputs.toggle({label: \"Secrets & Lies Expansion\", value: false})\nviewof storyCards = Inputs.toggle({label: \"Use Story Cards\", value: false, disabled: !secretsLies})\n\nstoryCardsVisible = secretsLies\n\nfunction getGameSetup() {\n  return {\n    difficulty,\n    players,\n    hiddenSigns,\n    secretsLies,\n    storyCards: secretsLies && storyCards\n  };\n}"
+  },
+  {
+    "objectID": "index.html#game-configuration",
+    "href": "index.html#game-configuration",
+    "title": "Mysterium Game Setup",
+    "section": "Game Configuration",
+    "text": "Game Configuration\nPlease select your game settings:\n\n\n${viewof difficulty}\n\n\n${viewof players}\n\n\n${viewof hiddenSigns}\n\n\n${viewof secretsLies}\n\n\n${viewof storyCards}\n\nStart Game\n\n\n// Handle form submission\nd3.select(\"#startGame\").on(\"click\", () =&gt; {\n  const gameSetup = getGameSetup();\n  console.log('Game Setup:', gameSetup);\n  // Here you would initialize the game or navigate to the game page\n  alert('Game setup complete! Check console for details.');\n});"
+  },
+  {
+    "objectID": "index.html#welcome-to-mysterium-game-setup",
+    "href": "index.html#welcome-to-mysterium-game-setup",
+    "title": "Mysterium Game Setup",
+    "section": "Welcome to Mysterium Game Setup",
+    "text": "Welcome to Mysterium Game Setup\nPlease configure your game settings below:\n\n\n${viewof difficulty}\n\n\n${viewof players}\n\n\n${viewof hiddenSigns}\n\n\n${viewof secretsLies}\n\n\n${viewof storyCards}\n\nStart Game\n\n\n// Handle form submission\n{\n  const startButton = document.getElementById('startGame');\n  if (startButton) {\n    startButton.addEventListener('click', () =&gt; {\n      const gameSetup = getGameSetup();\n      console.log('Game Setup:', gameSetup);\n      alert('Game setup complete! Check console for details.');\n      // Here you would initialize the game or navigate to the game page\n    });\n  }\n}"
+  }
+]

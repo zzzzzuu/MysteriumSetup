@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mysterium Game Board</title>
+    <style>
+        body, html {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+            text-align: center;
+        }
+        .game-board {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+        .ghost-view, .player-view {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 10px;
+        }
+        .ghost-view {
+            background-color: #e0e0e0;
+            transform: rotate(180deg);
+        }
+        .player-view {
+            background-color: #f0f0f0;
+        }
+        .card-section {
+            margin: 5px 0;
+        }
+        .row-label {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .card-row {
+            display: flex;
+            justify-content: center;
+        }
+        .card {
+            width: 40px;
+            height: 60px;
+            background-color: white;
+            border: 1px solid #333;
+            border-radius: 3px;
+            margin: 0 2px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 12px;
+            font-weight: bold;
+            padding: 2px;
+        }
+        .view-label {
+            font-size: 18px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-board">
+        <div class="ghost-view">
+            <div class="view-label">Ghost View</div>
+            <div class="card-section">
+                <div class="row-label">Person</div>
+                <div id="ghostPersonCards" class="card-row"></div>
+            </div>
+            <div class="card-section">
+                <div class="row-label">Location</div>
+                <div id="ghostLocationCards" class="card-row"></div>
+            </div>
+            <div class="card-section">
+                <div class="row-label">Object/Story</div>
+                <div id="ghostObjectCards" class="card-row"></div>
+            </div>
+        </div>
+        <div class="player-view">
+            <div class="view-label">Player View</div>
+            <div class="card-section">
+                <div class="row-label">Object/Story</div>
+                <div id="playerObjectCards" class="card-row"></div>
+            </div>
+            <div class="card-section">
+                <div class="row-label">Location</div>
+                <div id="playerLocationCards" class="card-row"></div>
+            </div>
+            <div class="card-section">
+                <div class="row-label">Person</div>
+                <div id="playerPersonCards" class="card-row"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const gameSetup = {
+            difficulty: urlParams.get('difficulty') || 'medium',
+            players: parseInt(urlParams.get('players')) || 4,
+            hiddenSigns: urlParams.get('hiddenSigns') === 'on',
+            secretsLies: urlParams.get('secretsLies') === 'on',
+            storyCards: urlParams.get('storyCards') === 'on'
+        };
+
+        function getCardPool(baseStart, baseEnd, hsStart, hsEnd, slStart, slEnd) {
+            let pool = Array.from({length: baseEnd - baseStart + 1}, (_, i) => (i + baseStart).toString());
+            if (gameSetup.hiddenSigns) {
+                pool = pool.concat(Array.from({length: hsEnd - hsStart + 1}, (_, i) => `HS${i + hsStart}`));
+            }
+            if (gameSetup.secretsLies) {
+                pool = pool.concat(Array.from({length: slEnd - slStart + 1}, (_, i) => `SL${i + slStart}`));
+            }
+            return pool;
+        }
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        function sortCards(cards) {
+            return cards.sort((a, b) => {
+                const typeA = a.startsWith('HS') ? 'HS' : (a.startsWith('SL') ? 'SL' : 'base');
+                const typeB = b.startsWith('HS') ? 'HS' : (b.startsWith('SL') ? 'SL' : 'base');
+                if (typeA !== typeB) {
+                    const typePriority = { 'base': 0, 'HS': 1, 'SL': 2 };
+                    return typePriority[typeA] - typePriority[typeB];
+                }
+                return parseInt(a.replace(/\D/g, '')) - parseInt(b.replace(/\D/g, ''));
+            });
+        }
+
+        function generateCards() {
+            const numCards = {
+                'easy': [4, 5, 5, 6, 6, 7],
+                'medium': [5, 6, 6, 7, 8, 8],
+                'hard': [6, 7, 7, 8, 9, 9]
+            }[gameSetup.difficulty][gameSetup.players - 2];
+
+            const personPool = getCardPool(1, 18, 1, 6, 1, 6);
+            const locationPool = getCardPool(19, 36, 7, 12, 7, 12);
+            const objectPool = gameSetup.storyCards ? 
+                ['SL19', 'SL20', 'SL21', 'SL22', 'SL23', 'SL24', 'SL25', 'SL26', 'SL27', 'SL28', 'SL29', 'SL30', 'SL31', 'SL32', 'SL33', 'SL34', 'SL35', 'SL36', 'P5'] :
+                getCardPool(37, 54, 13, 18, 13, 18);
+
+            shuffleArray(personPool);
+            shuffleArray(locationPool);
+            shuffleArray(objectPool);
+
+            const selectedPersons = personPool.slice(0, numCards);
+            const selectedLocations = locationPool.slice(0, numCards);
+            const selectedObjects = objectPool.slice(0, numCards);
+
+            displayPlayerCards('playerPersonCards', sortCards([...selectedPersons]));
+            displayPlayerCards('playerLocationCards', sortCards([...selectedLocations]));
+            displayPlayerCards('playerObjectCards', sortCards([...selectedObjects]));
+
+            displayGhostCards(selectedPersons, selectedLocations, selectedObjects);
+        }
+
+        function displayPlayerCards(containerId, cards) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            cards.forEach(card => {
+                const cardElement = document.createElement('div');
+                cardElement.className = 'card';
+                cardElement.textContent = card;
+                container.appendChild(cardElement);
+            });
+        }
+
+        function generateUniqueAssignments(persons, locations, objects, count) {
+            const assignments = [];
+            const usedIndices = new Set();
+
+            while (assignments.length < count) {
+                let index;
+                do {
+                    index = Math.floor(Math.random() * persons.length);
+                } while (usedIndices.has(index));
+
+                usedIndices.add(index);
+                assignments.push({
+                    person: persons[index],
+                    location: locations[index],
+                    object: objects[index]
+                });
+            }
+
+            return assignments;
+        }
+
+        function displayGhostCards(persons, locations, objects) {
+            const ghostPersons = document.getElementById('ghostPersonCards');
+            const ghostLocations = document.getElementById('ghostLocationCards');
+            const ghostObjects = document.getElementById('ghostObjectCards');
+
+            ghostPersons.innerHTML = '';
+            ghostLocations.innerHTML = '';
+            ghostObjects.innerHTML = '';
+
+            let numGhostColumns;
+            let ghostAssignments;
+
+            if (gameSetup.players === 2) {
+                numGhostColumns = 2;
+                ghostAssignments = generateUniqueAssignments(persons, locations, objects, 2);
+            } else if (gameSetup.players === 3) {
+                numGhostColumns = 4;
+                ghostAssignments = generateUniqueAssignments(persons, locations, objects, 4);
+            } else {
+                numGhostColumns = gameSetup.players - 1;
+                ghostAssignments = generateUniqueAssignments(persons, locations, objects, numGhostColumns);
+            }
+
+            ghostAssignments.forEach(assignment => {
+                ghostPersons.appendChild(createCard(assignment.person));
+                ghostLocations.appendChild(createCard(assignment.location));
+                ghostObjects.appendChild(createCard(assignment.object));
+            });
+        }
+
+        function createCard(content) {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.textContent = content;
+            return card;
+        }
+
+        generateCards();
+    </script>
+</body>
+</html>
