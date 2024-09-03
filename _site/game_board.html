@@ -105,16 +105,20 @@
             players: parseInt(urlParams.get('players')) || 4,
             hiddenSigns: urlParams.get('hiddenSigns') === 'on',
             secretsLies: urlParams.get('secretsLies') === 'on',
-            storyCards: urlParams.get('storyCards') === 'on'
+            storyCards: urlParams.get('storyCards') === 'on',
+            promoCards: urlParams.get('promoCards') ? urlParams.get('promoCards').split(',') : []
         };
 
-        function getCardPool(baseStart, baseEnd, hsStart, hsEnd, slStart, slEnd) {
+        function getCardPool(baseStart, baseEnd, hsStart, hsEnd, slStart, slEnd, promoCards) {
             let pool = Array.from({length: baseEnd - baseStart + 1}, (_, i) => (i + baseStart).toString());
             if (gameSetup.hiddenSigns) {
                 pool = pool.concat(Array.from({length: hsEnd - hsStart + 1}, (_, i) => `HS${i + hsStart}`));
             }
             if (gameSetup.secretsLies) {
                 pool = pool.concat(Array.from({length: slEnd - slStart + 1}, (_, i) => `SL${i + slStart}`));
+            }
+            if (promoCards && promoCards.length > 0) {
+                pool = pool.concat(promoCards);
             }
             return pool;
         }
@@ -128,10 +132,10 @@
 
         function sortCards(cards) {
             return cards.sort((a, b) => {
-                const typeA = a.startsWith('HS') ? 'HS' : (a.startsWith('SL') ? 'SL' : 'base');
-                const typeB = b.startsWith('HS') ? 'HS' : (b.startsWith('SL') ? 'SL' : 'base');
+                const typeA = a.startsWith('HS') ? 'HS' : (a.startsWith('SL') ? 'SL' : (a.startsWith('P') ? 'P' : 'base'));
+                const typeB = b.startsWith('HS') ? 'HS' : (b.startsWith('SL') ? 'SL' : (b.startsWith('P') ? 'P' : 'base'));
                 if (typeA !== typeB) {
-                    const typePriority = { 'base': 0, 'HS': 1, 'SL': 2 };
+                    const typePriority = { 'base': 0, 'HS': 1, 'SL': 2, 'P': 3 };
                     return typePriority[typeA] - typePriority[typeB];
                 }
                 return parseInt(a.replace(/\D/g, '')) - parseInt(b.replace(/\D/g, ''));
@@ -145,19 +149,25 @@
                 'hard': [6, 7, 7, 8, 9, 9]
             }[gameSetup.difficulty][gameSetup.players - 2];
 
-            const personPool = getCardPool(1, 18, 1, 6, 1, 6);
-            const locationPool = getCardPool(19, 36, 7, 12, 7, 12);
-            const objectPool = gameSetup.storyCards ? 
-                ['SL19', 'SL20', 'SL21', 'SL22', 'SL23', 'SL24', 'SL25', 'SL26', 'SL27', 'SL28', 'SL29', 'SL30', 'SL31', 'SL32', 'SL33', 'SL34', 'SL35', 'SL36', 'P5'] :
-                getCardPool(37, 54, 13, 18, 13, 18);
+            const personPool = getCardPool(1, 18, 1, 6, 1, 6, gameSetup.promoCards.includes('P1') ? ['P1'] : []);
+            const locationPool = getCardPool(19, 36, 7, 12, 7, 12, gameSetup.promoCards.includes('P2') ? ['P2'] : []);
+            const objectPool = getCardPool(37, 54, 13, 18, 13, 18, 
+                gameSetup.promoCards.filter(card => ['P3', 'P4'].includes(card)));
+
+            let storyPool = [];
+            if (gameSetup.storyCards) {
+                storyPool = ['SL19', 'SL20', 'SL21', 'SL22', 'SL23', 'SL24', 'SL25', 'SL26', 'SL27', 'SL28', 'SL29', 'SL30', 'SL31', 'SL32', 'SL33', 'SL34', 'SL35', 'SL36'];
+                storyPool = storyPool.concat(gameSetup.promoCards.filter(card => ['P5', 'P6'].includes(card)));
+            }
 
             shuffleArray(personPool);
             shuffleArray(locationPool);
             shuffleArray(objectPool);
+            if (storyPool.length > 0) shuffleArray(storyPool);
 
             const selectedPersons = personPool.slice(0, numCards);
             const selectedLocations = locationPool.slice(0, numCards);
-            const selectedObjects = objectPool.slice(0, numCards);
+            const selectedObjects = gameSetup.storyCards ? storyPool.slice(0, numCards) : objectPool.slice(0, numCards);
 
             displayPlayerCards('playerPersonCards', sortCards([...selectedPersons]));
             displayPlayerCards('playerLocationCards', sortCards([...selectedLocations]));
